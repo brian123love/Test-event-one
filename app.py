@@ -11,7 +11,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'super-secret-brims-key')
 
 # PostgreSQL Database Configuration (Inatumika Render au Local)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///local_test.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
