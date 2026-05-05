@@ -10,8 +10,13 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'super-secret-brims-key')
 
+# DATABASE CONNECTION
+# -----------------------------
+# Get Render DATABASE_URL from environment
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
 # PostgreSQL Database Configuration (Inatumika Render au Local)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
