@@ -15,7 +15,11 @@ app.secret_key = os.environ.get('SECRET_KEY', 'super-secret-brims-key')
 # Get Render DATABASE_URL from environment
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# PostgreSQL Database Configuration (Inatumika Render au Local)
+# FIX 1: SQLAlchemy requires 'postgresql://' but Render provides 'postgres://'
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# PostgreSQL Database Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -26,8 +30,8 @@ db = SQLAlchemy(app)
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False) # Mfano: "Harusi ya Juma & Neema"
-    event_code = db.Column(db.String(50), unique=True, nullable=False) # Mfano: "JUMA2026" (Username ya admin)
-    password_hash = db.Column(db.String(256), nullable=False) # Password ya scanner wa hii harusi
+    event_code = db.Column(db.String(50), unique=True, nullable=False) # Mfano: "JUMA2026"
+    password_hash = db.Column(db.String(256), nullable=False) # Password ya scanner
     guests = db.relationship('Guest', backref='event', lazy=True, cascade="all, delete-orphan")
 
 class Guest(db.Model):
@@ -38,7 +42,7 @@ class Guest(db.Model):
     allowed = db.Column(db.Integer, default=1)
     used = db.Column(db.Integer, default=0)
     
-    # Hii inahakikisha qr_code ni unique ndani ya event moja tu, events tofauti zinaweza kuwa na code sawa bila shida
+    # Hii inahakikisha qr_code ni unique ndani ya event moja tu
     __table_args__ = (db.UniqueConstraint('event_id', 'qr_code', name='unique_guest_per_event'),)
 
 # Create tables if they don't exist
@@ -55,6 +59,7 @@ def login():
         
         event = Event.query.filter_by(event_code=event_code).first()
         
+        # Ensures only MCs, DJs, or authorized scanners with passwords can access this
         if event and check_password_hash(event.password_hash, password):
             session['event_id'] = event.id
             session['event_name'] = event.name
@@ -72,7 +77,7 @@ def logout():
 
 @app.route('/')
 def scanner():
-    # Hakikisha scanner amelogin kwenye event husika
+    # Hakikisha scanner amelogin
     if 'event_id' not in session:
         return redirect(url_for('login'))
     
@@ -97,21 +102,22 @@ def scan():
     if not guest:
         return jsonify({'status': 'invalid', 'name': None, 'used': 0, 'allowed': 0})
         
-    if guest.used_entries < guest.allowed_entries:
-        guest.used_entries += 1
+    # FIX 2: Corrected attributes from used_entries/allowed_entries to used/allowed
+    if guest.used < guest.allowed:
+        guest.used += 1
         db.session.commit()
         return jsonify({
             'status': 'success',
             'name': guest.name,
-            'used': guest.used_entries,
-            'allowed': guest.allowed_entries
+            'used': guest.used,
+            'allowed': guest.allowed
         })
     else:
         return jsonify({
             'status': 'full',
             'name': guest.name,
-            'used': guest.used_entries,
-            'allowed': guest.allowed_entries
+            'used': guest.used,
+            'allowed': guest.allowed
         })
 
 if __name__ == '__main__':
