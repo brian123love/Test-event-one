@@ -40,41 +40,9 @@ class Guest(db.Model):
     __table_args__ = (db.UniqueConstraint('event_id', 'qr_code', name='unique_guest_per_event'),)
 
 # --- ONE-TIME DATABASE RESET & LOAD ---
-with app.app_context():
-    # HATUA YA KWANZA: Futa kila kitu na uanze upya (Hii itasafisha database yako ya Render)
-    # Baada ya login kukubali, unaweza kufuta mstari huu wa drop_all()
-    db.drop_all() 
+with app.app_context(): 
     db.create_all()
     
-    # HATUA YA PILI: Sajili Harusi upya
-    target_code = "BRN2026"
-    new_event = Event(
-        name="Harusi ya Brian na Neema", 
-        event_code=target_code, 
-        password_hash=generate_password_hash("Password123")
-    )
-    db.session.add(new_event)
-    db.session.commit()
-    print(f"🚀 Database imesafishwa! Harusi {target_code} imesajiliwa upya.")
-
-    # HATUA YA TATU: Pakia Wageni kutoka CSV
-    csv_path = 'guests_with_ids.csv'
-    if os.path.exists(csv_path):
-        with open(csv_path, mode='r', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                g = Guest(
-                    event_id=new_event.id,
-                    name=row['name'],
-                    qr_code=row['code'],
-                    allowed=int(row['allowed'])
-                )
-                db.session.add(g)
-            db.session.commit()
-            print("✅ Wageni wote wamepakiwa upya!")
-
-# --- ROUTES ---
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
